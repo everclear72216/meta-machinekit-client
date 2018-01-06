@@ -1,0 +1,125 @@
+diff --git a/3rdparty/machinetalk-protobuf-qt/machinetalk-protobuf-lib.pri b/3rdparty/machinetalk-protobuf-qt/machinetalk-protobuf-lib.pri
+index f39d506..f899afa 100644
+--- a/3rdparty/machinetalk-protobuf-qt/machinetalk-protobuf-lib.pri
++++ b/3rdparty/machinetalk-protobuf-qt/machinetalk-protobuf-lib.pri
+@@ -2,7 +2,6 @@ include(../../paths.pri)
+ 
+ MACHINETALK_PATH = $$OUT_PWD/../../3rdparty/machinetalk-protobuf-qt
+ INCLUDEPATH += $$MACHINETALK_PATH/build/cpp
+-!isEmpty(PROTOBUF_INCLUDE_PATH): INCLUDEPATH += $$PROTOBUF_INCLUDE_PATH
+ 
+ !win32 {
+     LIBS += -L$$MACHINETALK_PATH
+diff --git a/apps/MachinekitClient/translation.pri b/apps/MachinekitClient/translation.pri
+index f043875..be0175d 100644
+--- a/apps/MachinekitClient/translation.pri
++++ b/apps/MachinekitClient/translation.pri
+@@ -10,9 +10,12 @@ defineReplace(prependAll) {
+ TRANSLATIONS = $$prependAll(LANGUAGES, $${TRANSLATIONS_PATH}/$${TARGET_NAME}_, .ts)
+ TRANSLATIONS_OUT = $$prependAll(LANGUAGES, $${OUTPUT_DIR}/$${TARGET_NAME}_, .qm)
+ 
++INSTALL_BINS = $$[QT_INSTALL_BINS]
++
+ isEmpty(QMAKE_LUPDATE) {
+     win32:QMAKE_LUPDATE = $$[QT_INSTALL_BINS]\lupdate.exe
+-    else:QMAKE_LUPDATE = $$[QT_INSTALL_BINS]/lupdate
++    else:QMAKE_LUPDATE = $$replace(INSTALL_BINS, recipe-sysroot, recipe-sysroot-native)/lupdate
++    #else:QMAKE_LUPDATE = $$[QT_INSTALL_BINS]/lupdate
+ }
+ 
+ for(a,TRANSLATIONS): {
+@@ -21,8 +24,10 @@ for(a,TRANSLATIONS): {
+ 
+ isEmpty(QMAKE_LRELEASE) {
+     win32:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\lrelease.exe
+-    else:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
++    else: QMAKE_LRELEASE = $$replace(INSTALL_BINS, recipe-sysroot, recipe-sysroot-native)/lrelease
++    #else:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
+ }
++
+ updateqm.input = TRANSLATIONS
+ updateqm.output = $${OUTPUT_DIR}/${QMAKE_FILE_BASE}.qm
+ updateqm.commands = $$QMAKE_MKDIR $$shell_path($$dirname(updateqm.output)) $$escape_expand(\n\t)
+@@ -31,4 +36,6 @@ updateqm.CONFIG += no_link
+ updateqm.variable_out = PRE_TARGETDEPS
+ QMAKE_EXTRA_COMPILERS += updateqm
+ 
+-OTHER_FILES += $$TRANSLATIONS_OUT
++updateqm_install.files = $$TRANSLATIONS_OUT
++updateqm_install.path = $$[QT_INSTALL_TRANSLATIONS]
++INSTALLS += updateqm_install
+diff --git a/src/deployment.pri b/src/deployment.pri
+index ff9ca72..1ae7034 100644
+--- a/src/deployment.pri
++++ b/src/deployment.pri
+@@ -53,23 +53,6 @@ win32: QMAKE_DEL_FILE = del /q /f
+ !win32:QMAKE_DEL_FILE = rm -r -f
+ QMAKE_CLEAN += $$OUT_PWD/../../imports/$$TARGETPATH/
+ 
+-# ========== install additional files ==========
+-isEmpty(QMLPLUGINDUMP): QMLPLUGINDUMP = 1
+-equals(QMLPLUGINDUMP, 1): !ios: !android: CONFIG(release, debug|release): {
+-    dumppluginqmltypes.CONFIG = no_files no_path
+-    dumppluginqmltypes.commands = $$dirname(QMAKE_QMAKE)/qmlplugindump -nonrelocatable "$$uri $$PLUGIN_VERSION $$shell_path($$OUT_PWD/../../imports/) > $$shell_path($$OUT_PWD/../../imports/$$TARGETPATH/plugins.qmltypes)"
+-    INSTALLS += dumppluginqmltypes
+-
+-    copypluginqmltypes.CONFIG = no_files no_path
+-# make sure the directory exists
+-    !win32: copypluginqmltypes.commands = $$QMAKE_MKDIR $$shell_path(${DESTDIR}$$[QT_INSTALL_QML]/$$TARGETPATH/) $$escape_expand(\n\t)
+-    !win32: copypluginqmltypes.commands += $$QMAKE_COPY $$shell_path($$OUT_PWD/../../imports/$$TARGETPATH/plugins.qmltypes) $$shell_path(${DESTDIR}$$[QT_INSTALL_QML]/$$TARGETPATH/plugins.qmltypes)
+-# ignore any errors on Windows
+-    win32: copypluginqmltypes.commands = xcopy $$shell_path($$OUT_PWD/../../imports/$$TARGETPATH/plugins.qmltypes) $$shell_path($$[QT_INSTALL_QML]/$$TARGETPATH/plugins.qmltypes) /C /E /Q /Y $$escape_expand(\n\t)
+-    win32: copypluginqmltypes.commands = exit 0
+-    INSTALLS += copypluginqmltypes
+-}
+-
+ copyqmlinfra_install.files = $$QML_INFRA_FILES
+ copyqmlinfra_install.path = $$[QT_INSTALL_QML]/$$TARGETPATH
+ INSTALLS += copyqmlinfra_install
+diff --git a/src/protobuf.pri b/src/protobuf.pri
+index b474075..b20ff47 100644
+--- a/src/protobuf.pri
++++ b/src/protobuf.pri
+@@ -49,9 +49,9 @@ QMAKE_EXTRA_COMPILERS += protobuf_impl
+ 
+ INCLUDEPATH += $$OUT_PWD/$$PROTOGEN
+ 
+-!isEmpty(PROTOBUF_INCLUDE_PATH): INCLUDEPATH += $$PROTOBUF_INCLUDE_PATH
+-!isEmpty(PROTOBUF_LIB_PATH): LIBS += -L$$PROTOBUF_LIB_PATH
+-!isEmpty(PROTOBUF_LIB_FLAGS): LIBS += $$PROTOBUF_LIB_FLAGS
++#!isEmpty(PROTOBUF_INCLUDE_PATH): INCLUDEPATH += $$PROTOBUF_INCLUDE_PATH
++#!isEmpty(PROTOBUF_LIB_PATH): LIBS += -L$$PROTOBUF_LIB_PATH
++#!isEmpty(PROTOBUF_LIB_FLAGS): LIBS += $$PROTOBUF_LIB_FLAGS
+ 
+ !win32: LIBS += -lprotobuf
+ win32:  LIBS += -llibprotobuf
+diff --git a/src/translation.pri b/src/translation.pri
+index ff0aa55..4906bc2 100644
+--- a/src/translation.pri
++++ b/src/translation.pri
+@@ -9,9 +9,12 @@ defineReplace(prependAll) {
+ TRANSLATIONS = $$prependAll(LANGUAGES, $${TRANSLATIONS_PATH}/$${TARGET_NAME}_, .ts)
+ TRANSLATIONS_OUT = $$prependAll(LANGUAGES, $${OUTPUT_DIR}/$${TARGET_NAME}_, .qm)
+ 
++INSTALL_BINS = $$[QT_INSTALL_BINS]
++
+ isEmpty(QMAKE_LUPDATE) {
+     win32:QMAKE_LUPDATE = $$[QT_INSTALL_BINS]\lupdate.exe
+-    else:QMAKE_LUPDATE = $$[QT_INSTALL_BINS]/lupdate
++    else:QMAKE_LUPDATE = $$replace(INSTALL_BINS, recipe-sysroot, recipe-sysroot-native)/lupdate
++    #else:QMAKE_LUPDATE = $$[QT_INSTALL_BINS]/lupdate
+ }
+ 
+ for(a,TRANSLATIONS): {
+@@ -20,8 +23,10 @@ for(a,TRANSLATIONS): {
+ 
+ isEmpty(QMAKE_LRELEASE) {
+     win32:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\lrelease.exe
+-    else:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
++    else: QMAKE_LRELEASE = $$replace(INSTALL_BINS, recipe-sysroot, recipe-sysroot-native)/lrelease
++    #else:QMAKE_LRELEASE = $$[QT_INSTALL_BINS]/lrelease
+ }
++
+ updateqm.input = TRANSLATIONS
+ updateqm.output = $${OUTPUT_DIR}/${QMAKE_FILE_BASE}.qm
+ updateqm.commands = $$QMAKE_MKDIR $$shell_path($$dirname(updateqm.output)) $$escape_expand(\n\t)
